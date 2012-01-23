@@ -1,7 +1,7 @@
 #[link(name = "iter",
        vers = "0.1",
        uuid = "1ADE62EE-BE76-46C1-B065-3438B7199A37",
-       url = "http://github.com/nikomatsakis/iter")];
+       url = "https://github.com/nikomatsakis/rust-iter")];
 
 #[comment = "Rust iteration library"];
 #[license = "MIT"];
