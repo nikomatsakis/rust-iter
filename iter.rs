@@ -1,12 +1,28 @@
-type iterable<A> = fn@(fn(A));
-
-fn iterate<A>(coll: iterable<A>, blk: fn(A)) {
-    coll(blk);
+iface iterable<A> {
+    fn iter(blk: fn(A));
 }
 
-fn enumerate<A>(self: iterable<A>, blk: fn(uint, A)) {
+impl<A> of iterable<A> for fn@(fn(A)) {
+    fn iter(blk: fn(A)) {
+        self(blk);
+    }
+}
+
+impl<A> of iterable<A> for [A] {
+    fn iter(blk: fn(A)) {
+        vec::iter(self, blk)
+    }
+}
+
+impl<A> of iterable<A> for option<A> {
+    fn iter(blk: fn(A)) {
+        option::may(self, blk)
+    }
+}
+
+fn enumerate<A,IA:iterable<A>>(self: IA, blk: fn(uint, A)) {
     let i = 0u;
-    iterate(self) {|a|
+    self.iter {|a|
         blk(i, a);
         i += 1u;
     }
@@ -16,38 +32,36 @@ fn enumerate<A>(self: iterable<A>, blk: fn(uint, A)) {
 // we will be binding them up into a closure.  Disappointing.  A true
 // region type system might be able to do better than this.
 
-fn filter<A>(self: iterable<A>, prd: fn@(A) -> bool, blk: fn(A)) {
-    iterate(self) {|a|
+fn filter<A,IA:iterable<A>>(self: IA, prd: fn@(A) -> bool, blk: fn(A)) {
+    self.iter {|a|
         if prd(a) { blk(a) }
     }
 }
 
-fn map<A,B>(self: iterable<A>, cnv: fn@(A) -> B, blk: fn(B)) {
-    iterate(self) {|a|
+fn map<A,B,IA:iterable<A>>(self: IA, cnv: fn@(A) -> B, blk: fn(B)) {
+    self.iter {|a|
         let b = cnv(a);
         blk(b);
     }
 }
 
-fn filter_map<A,B>(self: iterable<A>, cnv: fn@(A) -> option<B>, blk: fn(B)) {
-    iterate(self) {|a|
-        alt cnv(a) {
-          some(b) { blk(b) }
-          none { /* no action */ }
-        }
+fn flat_map<A,B,IA:iterable<A>,IB:iterable<B>>(
+    self: IA, cnv: fn@(A) -> IB, blk: fn(B)) {
+    self.iter {|a|
+        cnv(a).iter(blk)
     }
 }
 
-fn foldl<A,B:copy>(self: iterable<A>, b0: B, blk: fn@(B, A) -> B) -> B {
+fn foldl<A,B:copy,IA:iterable<A>>(self: IA, b0: B, blk: fn(B, A) -> B) -> B {
     let b = b0;
-    iterate(self) {|a|
+    self.iter {|a|
         b = blk(b, a);
     }
     ret b;
 }
 
-fn to_list<A:copy>(self: iterable<A>) -> [A] {
-    foldl(self, [], {|r, a| r + [a]})
+fn to_list<A:copy,IA:iterable<A>>(self: IA) -> [A] {
+    foldl::<A,[A],IA>(self, [], {|r, a| r + [a]})
 }
 
 #[test]
@@ -58,9 +72,37 @@ fn test_enumerate() {
 }
 
 #[test]
-fn test_to_list() {
+fn test_map_and_to_list() {
     let a = bind vec::iter([0, 1, 2], _);
     let b = bind map(a, {|i| i*2}, _);
     let c = to_list(b);
     assert c == [0, 2, 4];
+}
+
+#[test]
+fn test_flat_map_with_option() {
+    fn if_even(&&i: int) -> option<int> {
+        if (i % 2) == 0 { some(i) }
+        else { none }
+    }
+
+    let a = bind vec::iter([0, 1, 2], _);
+    let b = bind flat_map(a, if_even, _);
+    let c = to_list(b);
+    assert c == [0, 2];
+}
+
+#[test]
+fn test_flat_map_with_list() {
+    fn repeat(&&i: int) -> [int] {
+        let r = [];
+        int::range(0, i) {|_j| r += [i]; }
+        r
+    }
+
+    let a = bind vec::iter([0, 1, 2, 3], _);
+    let b = bind flat_map(a, repeat, _);
+    let c = to_list(b);
+    #debug["c = %?", c];
+    assert c == [1, 2, 2, 3, 3, 3];
 }
