@@ -64,6 +64,15 @@ fn to_list<A:copy,IA:iterable<A>>(self: IA) -> [A] {
     foldl::<A,[A],IA>(self, [], {|r, a| r + [a]})
 }
 
+fn repeat(times: uint, blk: fn(uint)) {
+    let i = 0u;
+    while i < times {
+        blk(i);
+        i += 1u;
+    }
+}
+
+
 #[test]
 fn test_enumerate() {
     enumerate(bind vec::iter([0u, 1u, 2u], _)) {|i,j|
@@ -106,3 +115,15 @@ fn test_flat_map_with_list() {
     #debug["c = %?", c];
     assert c == [1, 2, 2, 3, 3, 3];
 }
+
+#[test]
+fn test_repeat() {
+    let c = [];
+    repeat(5u) {|i|
+        c += [(i * 2u)];
+    };
+    #debug["c = %?", c];
+    assert c == [0u, 2u, 4u, 6u, 8u];
+}
+
+
