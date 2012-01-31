@@ -64,10 +64,10 @@ fn to_list<A:copy,IA:iterable<A>>(self: IA) -> [A] {
     foldl::<A,[A],IA>(self, [], {|r, a| r + [a]})
 }
 
-fn repeat(times: uint, blk: fn(uint)) {
+fn repeat(times: uint, blk: fn()) {
     let i = 0u;
     while i < times {
-        blk(i);
+        blk();
         i += 1u;
     }
 }
@@ -118,12 +118,14 @@ fn test_flat_map_with_list() {
 
 #[test]
 fn test_repeat() {
-    let c = [];
-    repeat(5u) {|i|
-        c += [(i * 2u)];
+    let c = [],
+        i = 0u;
+    repeat(5u) {||
+        c += [(i * i)];
+        i += 1u;
     };
     #debug["c = %?", c];
-    assert c == [0u, 2u, 4u, 6u, 8u];
+    assert c == [0u, 1u, 4u, 9u, 16u];
 }
 
 
